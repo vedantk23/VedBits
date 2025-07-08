@@ -153,7 +153,7 @@ const CreateEditPost: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8 lg:py-12">
-      <div className="animate-fade-in-up">
+      <div>
         {/* Header */}
         <div className="pb-6 sm:pb-8 border-b border-gray-200 mb-8 sm:mb-12">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-0">
@@ -195,8 +195,8 @@ const CreateEditPost: React.FC = () => {
         {/* Content */}
         <div>
           {!preview ? (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8 animate-fade-in-up stagger-1">
-              <div className="animate-fade-in-up stagger-2">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8">
+              <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">
                   Title
                 </label>
@@ -210,7 +210,7 @@ const CreateEditPost: React.FC = () => {
                 )}
               </div>
 
-              <div className="animate-fade-in-up stagger-3">
+              <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">
                   Content (Markdown)
                 </label>
@@ -226,7 +226,7 @@ const CreateEditPost: React.FC = () => {
               </div>
             </form>
           ) : (
-            <div className="prose prose-lg max-w-none blog-content animate-fade-in">
+            <div className="prose prose-lg max-w-none blog-content">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-light text-gray-900 mb-6 sm:mb-8">
                 {watchedTitle || 'Untitled Post'}
               </h1>
@@ -245,7 +245,7 @@ const CreateEditPost: React.FC = () => {
 
           {/* Rough Notation Help */}
           {!preview && (
-            <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-gray-50 rounded-xl animate-fade-in-up stagger-4">
+            <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-gray-50 rounded-xl">
               <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4">Rough Notation Syntax</h3>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                 <div className="space-y-2">
