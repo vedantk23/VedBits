@@ -16,7 +16,7 @@ const Auth: React.FC = () => {
   const { signIn, user, loading } = useAuth()
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [isSigningIn, setIsSigningIn] = useState(false)
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(signInSchema)
@@ -37,7 +37,7 @@ const Auth: React.FC = () => {
   }
 
   const onSubmit = async (data: any) => {
-    setLoading(true)
+    setIsSigningIn(true)
     try {
       await signIn(data.email, data.password)
       toast.success('Successfully signed in!')
@@ -45,7 +45,7 @@ const Auth: React.FC = () => {
     } catch (error: any) {
       toast.error(error.message || 'Invalid credentials')
     } finally {
-      setLoading(false)
+      setIsSigningIn(false)
     }
   }
 
@@ -110,10 +110,10 @@ const Auth: React.FC = () => {
             </div>
             <button 
               type="submit"
-              disabled={loading}
+              disabled={isSigningIn}
               className="w-full btn-primary py-3 sm:py-4 text-sm sm:text-base lg:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {isSigningIn ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
