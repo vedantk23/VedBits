@@ -17,10 +17,10 @@ interface Post {
 }
 
 const AdminDashboard: React.FC = () => {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const navigate = useNavigate()
   const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
+  const [postsLoading, setPostsLoading] = useState(true)
   const [sortBy, setSortBy] = useState<'created_at' | 'view_count' | 'title'>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
@@ -46,7 +46,7 @@ const AdminDashboard: React.FC = () => {
 
   const fetchPosts = async () => {
     if (!supabase) {
-      setLoading(false)
+      setPostsLoading(false)
       return
     }
     
@@ -62,7 +62,7 @@ const AdminDashboard: React.FC = () => {
       console.error('Error fetching posts:', error)
       toast.error('Failed to load posts')
     } finally {
-      setLoading(false)
+      setPostsLoading(false)
     }
   }
 
