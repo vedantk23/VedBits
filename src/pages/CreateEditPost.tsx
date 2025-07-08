@@ -17,10 +17,10 @@ const postSchema = z.object({
 
 const CreateEditPost: React.FC = () => {
   const { user } = useAuth()
-  const { loading } = useAuth()
+  const { loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const [loading, setLoading] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [preview, setPreview] = useState(false)
   const [existingPost, setExistingPost] = useState<any>(null)
   const [bodyContent, setBodyContent] = useState('')
@@ -39,7 +39,7 @@ const CreateEditPost: React.FC = () => {
   }, [bodyContent, setValue])
 
   // Show loading while auth is being checked
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
@@ -49,7 +49,7 @@ const CreateEditPost: React.FC = () => {
 
   // Redirect to signin if not authenticated (after loading is complete)
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       navigate('/signin')
       return
     }
@@ -57,7 +57,7 @@ const CreateEditPost: React.FC = () => {
     if (id) {
       fetchPost()
     }
-  }, [user, loading, id, navigate])
+  }, [user, authLoading, id, navigate])
 
   const fetchPost = async () => {
     if (!supabase) {
@@ -99,7 +99,7 @@ const CreateEditPost: React.FC = () => {
   }
 
   const onSubmit = async (data: any) => {
-    setLoading(true)
+    setIsProcessing(true)
     try {
       const slug = generateSlug(data.title)
 
@@ -141,7 +141,7 @@ const CreateEditPost: React.FC = () => {
         toast.error(error.message || 'Failed to save post')
       }
     } finally {
-      setLoading(false)
+      setIsProcessing(false)
     }
   }
 
@@ -182,11 +182,11 @@ const CreateEditPost: React.FC = () => {
               
               <button
                 onClick={handleSubmit(onSubmit)}
-                disabled={loading}
+                disabled={isProcessing}
                 className="btn-primary flex items-center space-x-1 sm:space-x-2 disabled:opacity-50 text-xs sm:text-sm px-2 sm:px-4 py-2"
               >
                 <Save className="h-4 w-4" />
-                <span>{loading ? 'Saving...' : 'Save Post'}</span>
+                <span>{isProcessing ? 'Saving...' : 'Save Post'}</span>
               </button>
             </div>
           </div>
