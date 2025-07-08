@@ -17,6 +17,7 @@ const postSchema = z.object({
 
 const CreateEditPost: React.FC = () => {
   const { user } = useAuth()
+  const { loading } = useAuth()
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const [loading, setLoading] = useState(false)
@@ -37,8 +38,18 @@ const CreateEditPost: React.FC = () => {
     setValue('body', bodyContent)
   }, [bodyContent, setValue])
 
+  // Show loading while auth is being checked
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+      </div>
+    )
+  }
+
+  // Redirect to signin if not authenticated (after loading is complete)
   useEffect(() => {
-    if (!user) {
+    if (!loading && !user) {
       navigate('/signin')
       return
     }
@@ -46,7 +57,7 @@ const CreateEditPost: React.FC = () => {
     if (id) {
       fetchPost()
     }
-  }, [user, id, navigate])
+  }, [user, loading, id, navigate])
 
   const fetchPost = async () => {
     if (!supabase) {

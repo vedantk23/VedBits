@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -13,7 +13,7 @@ const signInSchema = z.object({
 })
 
 const Auth: React.FC = () => {
-  const { signIn } = useAuth()
+  const { signIn, user, loading } = useAuth()
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -21,6 +21,20 @@ const Auth: React.FC = () => {
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(signInSchema)
   })
+
+  // Redirect if already authenticated
+  if (!loading && user) {
+    return <Navigate to="/admin" replace />
+  }
+
+  // Show loading while checking auth state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+      </div>
+    )
+  }
 
   const onSubmit = async (data: any) => {
     setLoading(true)

@@ -24,14 +24,25 @@ const AdminDashboard: React.FC = () => {
   const [sortBy, setSortBy] = useState<'created_at' | 'view_count' | 'title'>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
+  // Show loading while auth is being checked
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+      </div>
+    )
+  }
+
   useEffect(() => {
-    if (!user) {
-      navigate('/signin')
-      return
-    }
-    
     fetchPosts()
   }, [user, navigate, sortBy, sortOrder])
+
+  // Redirect to signin if not authenticated (after loading is complete)
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/signin')
+    }
+  }, [user, loading, navigate])
 
   const fetchPosts = async () => {
     if (!supabase) {
@@ -98,14 +109,6 @@ const AdminDashboard: React.FC = () => {
   }
 
   const totalViews = posts.reduce((sum, post) => sum + post.view_count, 0)
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
-      </div>
-    )
-  }
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8 lg:py-12">
