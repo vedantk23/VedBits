@@ -5,11 +5,12 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { Eye, EyeOff, Mail, Lock, Shield } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, Shield, Calculator } from 'lucide-react'
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+  captcha: z.string().min(1, 'Please solve the math problem'),
 })
 
 const Auth: React.FC = () => {
@@ -20,10 +21,29 @@ const Auth: React.FC = () => {
   const [attemptCount, setAttemptCount] = useState(0)
   const [isBlocked, setIsBlocked] = useState(false)
   const [blockTimeRemaining, setBlockTimeRemaining] = useState(0)
+  
+  // Mathematical captcha state
+  const [captchaQuestion, setCaptchaQuestion] = useState({ num1: 0, num2: 0, answer: 0 })
+  const [captchaError, setCaptchaError] = useState('')
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm({
     resolver: zodResolver(signInSchema)
   })
+
+  // Generate new captcha question
+  const generateCaptcha = () => {
+    const num1 = Math.floor(Math.random() * 20) + 1
+    const num2 = Math.floor(Math.random() * 20) + 1
+    const answer = num1 + num2
+    setCaptchaQuestion({ num1, num2, answer })
+    setCaptchaError('')
+    setValue('captcha', '') // Clear captcha input
+  }
+
+  // Initialize captcha on component mount
+  React.useEffect(() => {
+    generateCaptcha()
+  }, [])
 
   // Rate limiting logic
   React.useEffect(() => {
@@ -51,6 +71,7 @@ const Auth: React.FC = () => {
             localStorage.removeItem('signin_attempts')
             localStorage.removeItem('signin_block_time')
             clearInterval(interval)
+            generateCaptcha() // Generate new captcha when unblocked
           } else {
             setBlockTimeRemaining(remaining)
           }
@@ -65,6 +86,7 @@ const Auth: React.FC = () => {
       }
     }
   }, [])
+
   // Redirect if already authenticated
   if (!loading && user) {
     return <Navigate to="/admin" replace />
@@ -82,7 +104,15 @@ const Auth: React.FC = () => {
   const onSubmit = async (data: any) => {
     // Check if user is blocked
     if (isBlocked) {
-      toast.error(`Too many failed attempts. Try again in ${blockTimeRemaining} seconds.`)
+      toast.error(`Account blocked for 24 hours. Try again in ${formatTime(blockTimeRemaining)}.`)
+      return
+    }
+
+    // Verify captcha
+    const userAnswer = parseInt(data.captcha)
+    if (userAnswer !== captchaQuestion.answer) {
+      setCaptchaError('Incorrect answer. Please try again.')
+      generateCaptcha() // Generate new captcha on wrong answer
       return
     }
 
@@ -101,17 +131,20 @@ const Auth: React.FC = () => {
       setAttemptCount(newAttemptCount)
       localStorage.setItem('signin_attempts', newAttemptCount.toString())
       
-      // Block user after 5 failed attempts
-      if (newAttemptCount >= 5) {
-        const blockTime = Date.now() + (15 * 60 * 1000) // 15 minutes
+      // Block user after 2 failed attempts for 24 hours
+      if (newAttemptCount >= 2) {
+        const blockTime = Date.now() + (24 * 60 * 60 * 1000) // 24 hours
         localStorage.setItem('signin_block_time', blockTime.toString())
         setIsBlocked(true)
-        setBlockTimeRemaining(15 * 60)
-        toast.error('Too many failed attempts. Account temporarily blocked for 15 minutes.')
+        setBlockTimeRemaining(24 * 60 * 60)
+        toast.error('Account blocked for 24 hours due to multiple failed login attempts.')
       } else {
-        const remainingAttempts = 5 - newAttemptCount
-        toast.error(`Invalid credentials. ${remainingAttempts} attempts remaining.`)
+        const remainingAttempts = 2 - newAttemptCount
+        toast.error(`Invalid credentials. ${remainingAttempts} attempt remaining before 24-hour block.`)
       }
+      
+      // Generate new captcha after failed attempt
+      generateCaptcha()
       
       toast.error(error.message || 'Invalid credentials')
     } finally {
@@ -120,10 +153,19 @@ const Auth: React.FC = () => {
   }
 
   const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60)
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
     const remainingSeconds = seconds % 60
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${remainingSeconds}s`
+    } else if (minutes > 0) {
+      return `${minutes}m ${remainingSeconds}s`
+    } else {
+      return `${remainingSeconds}s`
+    }
   }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center py-6 sm:py-12 px-3 sm:px-4 lg:px-8">
       <div className="max-w-md w-full space-y-6 sm:space-y-8">
@@ -142,13 +184,16 @@ const Auth: React.FC = () => {
         <div className="card p-6 sm:p-8 lg:p-10">
           {/* Rate limiting warning */}
           {attemptCount > 0 && !isBlocked && (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
-                {attemptCount === 1 && 'Invalid login attempt. 4 attempts remaining.'}
-                {attemptCount === 2 && 'Invalid login attempt. 3 attempts remaining.'}
-                {attemptCount === 3 && 'Invalid login attempt. 2 attempts remaining.'}
-                {attemptCount === 4 && 'Invalid login attempt. 1 attempt remaining before temporary block.'}
-              </p>
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <Shield className="h-5 w-5 text-red-600" />
+                <div>
+                  <p className="text-sm font-medium text-red-800">Security Warning</p>
+                  <p className="text-xs text-red-600 mt-1">
+                    {attemptCount === 1 && 'Invalid login attempt. 1 attempt remaining before 24-hour block.'}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -158,14 +203,18 @@ const Auth: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Shield className="h-5 w-5 text-red-600" />
                 <div>
-                  <p className="text-sm font-medium text-red-800">Account Temporarily Blocked</p>
+                  <p className="text-sm font-medium text-red-800">Account Blocked</p>
                   <p className="text-xs text-red-600 mt-1">
-                    Too many failed login attempts. Try again in {formatTime(blockTimeRemaining)}.
+                    Multiple failed login attempts detected. Account blocked for 24 hours.
+                  </p>
+                  <p className="text-xs text-red-600 mt-1">
+                    Time remaining: {formatTime(blockTimeRemaining)}
                   </p>
                 </div>
               </div>
             </div>
           )}
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
@@ -177,7 +226,7 @@ const Auth: React.FC = () => {
                   {...register('email')}
                   type="email"
                   disabled={isBlocked}
-                  className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-sm sm:text-base"
+                  className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-sm sm:text-base disabled:bg-gray-100 disabled:cursor-not-allowed"
                   placeholder="Enter your email"
                 />
               </div>
@@ -196,14 +245,14 @@ const Auth: React.FC = () => {
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   disabled={isBlocked}
-                  className="w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-sm sm:text-base"
+                  className="w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-sm sm:text-base disabled:bg-gray-100 disabled:cursor-not-allowed"
                   placeholder="Enter your password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isBlocked}
-                  className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-300"
+                  className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-300 disabled:cursor-not-allowed"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
                 </button>
@@ -212,6 +261,42 @@ const Auth: React.FC = () => {
                 <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password.message}</p>
               )}
             </div>
+
+            {/* Mathematical Captcha */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                Security Verification
+              </label>
+              <div className="bg-gray-50 border border-gray-300 rounded-xl p-4 mb-3">
+                <div className="flex items-center justify-center space-x-3">
+                  <Calculator className="h-5 w-5 text-gray-600" />
+                  <span className="text-lg font-mono font-medium text-gray-800">
+                    {captchaQuestion.num1} + {captchaQuestion.num2} = ?
+                  </span>
+                  <button
+                    type="button"
+                    onClick={generateCaptcha}
+                    disabled={isBlocked}
+                    className="text-blue-600 hover:text-blue-800 text-sm underline disabled:cursor-not-allowed disabled:text-gray-400"
+                  >
+                    New Question
+                  </button>
+                </div>
+              </div>
+              <input
+                {...register('captcha')}
+                type="number"
+                disabled={isBlocked}
+                className="w-full px-3 sm:px-4 py-3 sm:py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-sm sm:text-base disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder="Enter the answer"
+              />
+              {(errors.captcha || captchaError) && (
+                <p className="mt-1 text-xs sm:text-sm text-red-600">
+                  {errors.captcha?.message || captchaError}
+                </p>
+              )}
+            </div>
+
             <button 
               type="submit"
               disabled={isSigningIn || isBlocked}
@@ -226,7 +311,10 @@ const Auth: React.FC = () => {
               Only authorized administrators can access this panel
             </p>
             <p className="text-xs text-gray-400 font-light text-center mt-2">
-              Maximum 5 login attempts per 15 minutes
+              Maximum 2 login attempts • 24-hour block after failed attempts
+            </p>
+            <p className="text-xs text-gray-400 font-light text-center mt-1">
+              Mathematical verification required for enhanced security
             </p>
           </div>
         </div>
